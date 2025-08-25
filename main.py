@@ -1,4 +1,4 @@
-# main_ytdlp.py - Alternative version using yt-dlp
+# main.py - YouTube Pro Audio Downloader using yt-dlp
 import os
 import sys
 import re
@@ -7,10 +7,10 @@ import yt_dlp
 def is_valid_youtube_url(url):
     """
     Validates if the provided URL is a valid YouTube URL.
-    
+
     Args:
         url (str): The URL to validate.
-        
+
     Returns:
         bool: True if the URL is a valid YouTube URL, False otherwise.
     """
@@ -21,16 +21,16 @@ def is_valid_youtube_url(url):
         r'^https?://(www\.)?youtube\.com/v/[\w-]+',
         r'^https?://(www\.)?youtube\.com/watch\?.*v=[\w-]+',
     ]
-    
+
     return any(re.match(pattern, url) for pattern in youtube_patterns)
 
 def validate_save_path(path):
     """
     Validates if the save path is accessible and writable.
-    
+
     Args:
         path (str): The path to validate.
-        
+
     Returns:
         bool: True if the path is valid and writable, False otherwise.
     """
@@ -39,13 +39,13 @@ def validate_save_path(path):
         if os.path.exists(path) and not os.path.isdir(path):
             print(f"Error: '{path}' exists but is not a directory.")
             return False
-        
+
         # Check if we can write to the directory (or its parent if it doesn't exist)
         test_path = path if os.path.exists(path) else os.path.dirname(os.path.abspath(path))
         if not os.access(test_path, os.W_OK):
             print(f"Error: No write permission for directory '{test_path}'.")
             return False
-            
+
         return True
     except Exception as e:
         print(f"Error validating save path: {e}")
@@ -75,7 +75,12 @@ def download_youtube_audio(video_url, output_path='.'):
             # Get video info first
             print(f"Connecting to YouTube with URL: {video_url}")
             info = ydl.extract_info(video_url, download=False)
-            
+
+            # Check if info was successfully extracted
+            if not info:
+                print("Error: Could not extract video information.")
+                return
+
             # Display video details
             print("\n" + "="*40)
             print(f"Title: {info.get('title', 'Unknown')}")
@@ -90,7 +95,7 @@ def download_youtube_audio(video_url, output_path='.'):
             expected_filename = ydl.prepare_filename(info)
             base_name = os.path.splitext(expected_filename)[0]
             final_filename = base_name + '.m4a'
-            
+
             if os.path.exists(final_filename):
                 print(f"File '{os.path.basename(final_filename)}' already exists.")
                 response = input("Do you want to overwrite it? (y/N): ").strip().lower()
@@ -100,10 +105,11 @@ def download_youtube_audio(video_url, output_path='.'):
                 os.remove(final_filename)
 
             # Download the audio
-            print(f"Downloading '{info.get('title', 'Unknown')}'...")
+            title = info.get('title', 'Unknown') if info else 'Unknown'
+            print(f"Downloading '{title}'...")
             ydl.download([video_url])
             print("Download completed successfully!")
-            
+
             # Find the downloaded file and rename if necessary
             for file in os.listdir(output_path):
                 if file.startswith(os.path.splitext(os.path.basename(expected_filename))[0]):
@@ -112,7 +118,7 @@ def download_youtube_audio(video_url, output_path='.'):
                         new_file_path = os.path.splitext(downloaded_file)[0] + '.m4a'
                         os.rename(downloaded_file, new_file_path)
                         downloaded_file = new_file_path
-                    
+
                     print(f"File successfully saved as: {os.path.basename(downloaded_file)}")
                     print(f"File location: {os.path.abspath(downloaded_file)}")
                     break
